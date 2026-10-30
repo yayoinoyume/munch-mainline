@@ -1,0 +1,10 @@
+src/
+out/
+assets/backup/
+assets/*.img
+*.tar.xz
+*.img
+*.ko
+*.o
+*.dtb
+__pycache__/
