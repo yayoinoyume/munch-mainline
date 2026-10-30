@@ -1,7 +1,7 @@
+# 大文件与产物（应放在 ../munch-mainline-work/）
 src/
 out/
-assets/backup/
-assets/*.img
+assets/
 *.tar.xz
 *.img
 *.ko

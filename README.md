@@ -10,9 +10,25 @@
 
 1. **绝不 `fastboot flash`**，只用 `fastboot boot`（临时加载到内存，不写分区）。
 2. **绝不碰** `userdata` / `super` / `metadata` / `boot` / `vbmeta` / `dtbo` 分区。
-3. 每次设备操作前，备份对应分区到 `assets/backup/` 并校验 sha256。
+3. 每次设备操作前，备份对应分区到本地工作区并校验 sha256。
 4. Rungic 容器（`com.rungic.plasma`）全程不停机、不改配置、不动 `/data/adb/rungic-lxc`。
 5. 失败即重启回 Android，零损失。
+
+## 目录分工
+
+```
+munch-mainline/           ← 本仓库（只放可公开的代码、文档、脚本）
+├── README.md
+├── docs/                 方案与记录
+├── dts/                  munch 设备树
+└── scripts/              构建、打包、验证脚本
+
+../munch-mainline-work/   ← 本地工作区（不进 git）
+├── src/                  Linux 7.3 源码（2.0 GB）
+├── out/                  编译产物
+├── assets/backup/        分区备份（boot_a.img 等）
+└── logs/                 运行日志
+```
 
 ## 阶段
 
@@ -25,17 +41,6 @@
 | 4 | 打包 boot.img（不写 flash） | 待开始 |
 | 5 | `fastboot boot` 验证（需用户在场） | 待开始 |
 | 6+ | 逐个加外设（屏幕/触摸/WiFi/音频） | 待开始 |
-
-## 目录
-
-```
-src/          Linux 7.3 源码（不进 git）
-out/          编译产物（不进 git）
-assets/       备份与素材（大文件不进 git）
-scripts/      构建与打包脚本
-dts/          munch 设备树
-docs/         方案与记录
-```
 
 ## 设备信息
 
