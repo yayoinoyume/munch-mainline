@@ -32,7 +32,7 @@
 
 | 文件 | 大小 | sha256 |
 |---|---|---|
-| `../munch-mainline-work/assets/backup/boot_a.img` | 192 MB | 待补 |
+| `../munch-mainline-work/assets/backup/boot_a.img` | 192 MB | `cb8fae0edeaf246256f9cf965ced8e52e3d86f8abf762a0b0755fd720626aa1d` |
 
 ## 待安装（需用户同意）
 
