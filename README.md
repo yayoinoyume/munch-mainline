@@ -30,6 +30,10 @@ munch-mainline/           ← 本仓库（只放可公开的代码、文档、�
 └── logs/                 运行日志
 ```
 
+## 交接
+
+新会话从这里开始：[`docs/02-handoff.md`](docs/02-handoff.md)
+
 ## 阶段
 
 | 阶段 | 内容 | 状态 |
