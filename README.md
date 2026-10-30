@@ -33,17 +33,18 @@ munch-mainline/           ← 本仓库（只放可公开的代码、文档、�
 ## 交接
 
 新会话从这里开始：[`docs/02-handoff.md`](docs/02-handoff.md)
+构建产物与校验数据：[`docs/03-build-report.md`](docs/03-build-report.md)
 
 ## 阶段
 
 | 阶段 | 内容 | 状态 |
 |---|---|---|
-| 0 | 源码、工具链、boot 分区备份 | 进行中 |
-| 1 | munch 最小 DTS（UFS/USB/ramoops/PMIC） | 待开始 |
-| 2 | 编译 7.3 内核 + DTB | 待开始 |
-| 3 | initramfs（启动标记 + telnet） | 待开始 |
-| 4 | 打包 boot.img（不写 flash） | 待开始 |
-| 5 | `fastboot boot` 验证（需用户在场） | 待开始 |
+| 0 | 源码、工具链、boot 分区备份 | ✅ 完成 |
+| 1 | munch 最小 DTS（UFS/USB/ramoops/PMIC） | ✅ 完成 |
+| 2 | 编译 7.3 内核 + DTB | ✅ 完成 |
+| 3 | initramfs（启动标记；telnet/RNDIS 待后续） | ✅ 本阶段完成 |
+| 4 | 打包 boot.img（v2+dtb 与 v3 对照组，不写 flash） | ✅ 完成 |
+| 5 | `fastboot boot` 验证（需用户在场） | ⏸ 待安排 |
 | 6+ | 逐个加外设（屏幕/触摸/WiFi/音频） | 待开始 |
 
 ## 设备信息

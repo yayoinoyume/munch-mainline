@@ -52,7 +52,7 @@
 | GPU | Adreno 650 | ✅ freedreno | 可用 |
 | 显示控制器 | msm/dpu | ✅ 主线有 | 可用 |
 | **屏幕面板** | `l11r` OLED（DSI） | ❌ 无驱动 | **必须新写，最卡** |
-| 触摸 | focaltech ft3658u | ⚠️ 主线有 focaltech 通用驱动 | 配 DTS |
+| 触摸 | focaltech ft3658u | ~~⚠️ 主线有 focaltech 通用驱动~~ **❌ 更正（2026-10-30）：主线只有 `edt-ft5x06`，支持 FT5x06/FT6x06/FT3518 系列，不支持 ft3658u** | ~~配 DTS~~ **需要新写驱动或移植 focaltech fts 驱动** |
 | WiFi | QCA6391（Android 用 qcacld-3.0） | ⚠️ 主线 ath11k | 换驱动 + 固件 |
 | 音频 | WCD9385 + ADSP | ⚠️ 主线 wcd938x + q6apm | 需 ADSP 固件 |
 | 充电 | pm8150b + 小米私有 | ⚠️ 主线 pm8150b | 快充协议要调 |

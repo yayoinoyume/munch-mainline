@@ -77,7 +77,12 @@
 | Dockerfile | `work/Dockerfile.kbuild`（已写，构建被中断，**镜像未完成**） |
 | 设备诊断脚本 | `/data/local/tmp/kprobe*.sh`（只读，可删） |
 
-**未完成**：Docker 镜像、DTS、defconfig、编译、initramfs、boot.img、任何设备操作。
+~~**未完成**：Docker 镜像、DTS、defconfig、编译、initramfs、boot.img、任何设备操作。~~
+
+**更新（2026-10-30，构建会话）**：Docker 镜像、DTS、defconfig、Image、dtb、initramfs、
+两个 boot.img 全部完成并通过校验，产物在 `../munch-mainline-work/out/`，
+细节见 [`docs/03-build-report.md`](03-build-report.md)。
+**仍然没做的**：任何设备操作（`fastboot boot` 还没跑过）。
 
 ## 4. 目录约定
 
@@ -161,7 +166,10 @@ docker run --rm \
 
 - 优先用 `magiskboot`（在 `/home/yayoi/projects/rungic-munch-build-kit/06-boot/` 或 Magisk 安装包内）
 - 或 `mkbootimg`（Android 工具，header v3）
-- 结构：kernel = `Image` + dtb（追加），ramdisk = initramfs
+- ~~结构：kernel = `Image` + dtb（追加），ramdisk = initramfs~~
+  **更正（2026-10-30）**：v3 头没有 dtb 字段，追加在后面的 dtb **不会被 ABL 使用**；
+  要自带 dtb 必须打 **v2 头**（header 里有 `dtb_size` / `dtb_addr`）。
+  实测与产物见 [`docs/03-build-report.md`](03-build-report.md)。
 - 校验大小 < 192 MB
 
 ### 5.7 `fastboot boot` 验证（**必须用户在场**）

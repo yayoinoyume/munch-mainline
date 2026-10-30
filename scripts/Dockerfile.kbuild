@@ -1,0 +1,24 @@
+# munch 主线内核编译环境
+# 基础镜像来自 docker.m.daocloud.io（国内镜像），apt 源来自 mirrors.tuna.tsinghua.edu.cn
+FROM debian:trixie
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# debian trixie 默认用 deb822 源（deb.debian.org），换成清华源。
+# 用 http 而非 https：官方 debian:trixie 镜像里没有 ca-certificates（/etc/ssl/certs 不存在），
+# apt 走 https 会 "certificate verify failed"；apt 仍会做 GPG 签名校验，包完整性不受影响。
+RUN rm -f /etc/apt/sources.list.d/debian.sources \
+ && printf '%s\n' \
+      'deb http://mirrors.tuna.tsinghua.edu.cn/debian trixie main contrib non-free-firmware' \
+      'deb http://mirrors.tuna.tsinghua.edu.cn/debian trixie-updates main contrib non-free-firmware' \
+      'deb http://mirrors.tuna.tsinghua.edu.cn/debian-security trixie-security main contrib non-free-firmware' \
+      > /etc/apt/sources.list
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      clang lld llvm make bc bison flex libssl-dev libelf-dev \
+      python3 perl rsync cpio gzip xz-utils git curl \
+      device-tree-compiler ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src

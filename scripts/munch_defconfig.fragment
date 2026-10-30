@@ -1,0 +1,63 @@
+# munch（Redmi K40S / SM8250）内核必需项，追加到 arch/arm64/configs/defconfig 之后
+# 生成 arch/arm64/configs/munch_defconfig（见 scripts/build.sh）
+
+# 平台
+CONFIG_ARCH_QCOM=y
+CONFIG_PINCTRL_SM8250=y
+CONFIG_QCOM_CLK_RPMH=y
+CONFIG_QCOM_RPMH=y
+CONFIG_REGULATOR_QCOM_RPMH=y
+
+# 调试串口（SE6 → uart6，ttyMSM0）
+CONFIG_SERIAL_QCOM_GENI=y
+CONFIG_SERIAL_QCOM_GENI_CONSOLE=y
+
+# UFS：内置进内核（boot 阶段没有 initramfs 加载模块的余地）
+CONFIG_RESET_CONTROLLER=y
+CONFIG_SCSI_UFSHCD=y
+CONFIG_SCSI_UFSHCD_PLATFORM=y
+CONFIG_SCSI_UFS_QCOM=y
+# PHY_QCOM_QMP_UFS 被 Kconfig 里的 "if PHY_QCOM_QMP" 圈着，父项必须先 =y，否则子项只能是 =m
+CONFIG_PHY_QCOM_QMP=y
+CONFIG_PHY_QCOM_QMP_UFS=y
+
+# USB 2.0 peripheral（盲启动时唯一的交互通道）
+CONFIG_USB_DWC3=y
+CONFIG_USB_DWC3_QCOM=y
+CONFIG_PHY_QCOM_USB_SNPS_FEMTO_V2=y
+CONFIG_PHY_QCOM_QMP_USB=y
+
+# USB gadget：configfs + RNDIS，给主机提供 usb0 网卡（telnet 通道）
+# defconfig 里 USB_CONFIGFS/USB_F_*/USB_U_ETHER 都是 =m；initramfs 没有 modprobe，
+# 必须全部 =y 才会编进 Image。
+CONFIG_USB_GADGET=y
+CONFIG_USB_CONFIGFS=y
+CONFIG_USB_CONFIGFS_RNDIS=y
+CONFIG_USB_CONFIGFS_NCM=y
+CONFIG_USB_CONFIGFS_F_FS=y
+CONFIG_USB_F_RNDIS=y
+CONFIG_USB_F_NCM=y
+CONFIG_USB_U_ETHER=y
+CONFIG_CONFIGFS_FS=y
+# 没加 CONFIG_USB_GADGET_TARGET：它 depends on TARGET_CORE（defconfig 里 =n），
+# 而且那是 USB target fabric，和 RNDIS 无关，打开只会白拉一堆 SCSI target 代码。
+
+# pstore/ramoops：跨重启保留内核日志 + 用户态标记
+CONFIG_PSTORE=y
+CONFIG_PSTORE_CONSOLE=y
+CONFIG_PSTORE_RAM=y
+CONFIG_PSTORE_PMSG=y
+
+# dwc3 模式：本镜像只做 USB 2.0 外设（DTS 里 dr_mode = "peripheral"），
+# 所以从 Dual Role 切成 gadget-only。defconfig 里选的是 USB_DWC3_DUAL_ROLE，
+# 它和 USB_DWC3_GADGET 是 Kconfig 的同一个 choice，两个都 =y 时 kconfig 只会
+# 保留先出现的那个，所以必须显式 unset，否则这行不生效。
+# 代价：dwc3 不再注册 xHCI 主机控制器（本探针不需要主机模式）。
+# CONFIG_USB_DWC3_DUAL_ROLE is not set
+CONFIG_USB_DWC3_GADGET=y
+
+# APSS 看门狗：bootloader 留下的狗默认在跑（实测约 135 秒咬）。
+# qcom_wdt probe 时发现计时器在跑就会用 wdd->timeout（30 秒）重新计时并置
+# WDOG_HW_RUNNING，配合 defconfig 里已有的 CONFIG_WATCHDOG_HANDLE_BOOT_ENABLED=y，
+# 内核核心会在没有用户态打开时持续喂狗。必须是 =y：initramfs 里没有 modprobe。
+CONFIG_QCOM_WDT=y

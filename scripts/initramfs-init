@@ -1,0 +1,115 @@
+#!/bin/sh
+# munch 可观测性探针（initramfs 的 PID 1）
+#
+# 内核起来后**不重启**：把 USB 配成 RNDIS 网卡 + telnetd，主机连进来读 dmesg。
+# 每一步都同时写 /dev/kmsg（console-ramoops）和 /dev/pmsg0（pmsg-ramoops），
+# 即使 USB gadget 没起来，重启回 Android 后也能从 pstore 看到卡在哪一步。
+
+# PID 1 拿到的环境是空的，显式设 PATH：下面所有 busybox applet 都靠它
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+export PATH
+
+KMSG=/dev/kmsg
+PMSG=/dev/pmsg0
+GADGET=/sys/kernel/config/usb_gadget/g1
+IFACE=usb0
+ADDR=192.168.42.129/24
+MASK=255.255.255.0
+
+log() {
+	echo "MUNCH-INIT: $*" >>"$KMSG" 2>/dev/null
+	[ -e "$PMSG" ] && echo "MUNCH-INIT: $*" >>"$PMSG" 2>/dev/null
+	return 0
+}
+
+# 跑一条命令并记录成败；失败不中断——探针必须活到主机能连上来
+try() {
+	what=$1
+	shift
+	if "$@" >/dev/null 2>&1; then
+		log "$what: ok"
+	else
+		log "$what: FAILED ($*)"
+	fi
+}
+
+mkdir -p /proc /sys /dev
+try "mount /proc" mount -t proc proc /proc
+try "mount /sys" mount -t sysfs sysfs /sys
+try "mount /dev" mount -t devtmpfs devtmpfs /dev
+mkdir -p /dev/pts /sys/kernel/config
+try "mount /dev/pts" mount -t devpts devpts /dev/pts
+try "mount configfs" mount -t configfs configfs /sys/kernel/config
+
+log "MUNCH-INIT-REACHED"
+log "kernel: $(uname -r)"
+for f in /proc/device-tree/model /proc/device-tree/compatible /proc/cmdline; do
+	[ -r "$f" ] && log "$(basename "$f"): $(cat "$f" 2>/dev/null)"
+done
+log "udc: $(ls /sys/class/udc 2>/dev/null | tr '\n' ' ')"
+log "watchdog: $(ls /sys/class/watchdog 2>/dev/null | tr '\n' ' ')state=$(cat /sys/class/watchdog/watchdog0/state 2>/dev/null) timeout=$(cat /sys/class/watchdog/watchdog0/timeout 2>/dev/null)"
+
+# configfs 里搭一个 RNDIS gadget：idVendor/idProduct 用 Linux Foundation 的
+# 1d6b:0104（Multifunction Composite Gadget），主机侧看到的就是一块 USB 网卡
+setup_gadget() {
+	mkdir -p "$GADGET" 2>/dev/null || { log "gadget: mkdir $GADGET FAILED"; return 1; }
+	echo 0x1d6b >"$GADGET/idVendor"
+	echo 0x0104 >"$GADGET/idProduct"
+	echo 0x0100 >"$GADGET/bcdUSB"
+	echo 0x0100 >"$GADGET/bcdDevice"
+	mkdir -p "$GADGET/strings/0x409"
+	echo "munch-7.3" >"$GADGET/strings/0x409/serialnumber"
+	echo "Xiaomi" >"$GADGET/strings/0x409/manufacturer"
+	echo "Redmi K40S mainline probe" >"$GADGET/strings/0x409/product"
+	mkdir -p "$GADGET/configs/c.1/strings/0x409"
+	echo "rndis" >"$GADGET/configs/c.1/strings/0x409/configuration"
+	echo 250 >"$GADGET/configs/c.1/MaxPower"
+	mkdir -p "$GADGET/functions/rndis.usb0"
+	ln -sf "$GADGET/functions/rndis.usb0" "$GADGET/configs/c.1/rndis.usb0"
+	log "gadget: configfs 节点就绪（1d6b:0104，rndis.usb0 链进 c.1）"
+}
+
+# UDC 只有 dwc3 probe 完才出现，所以这个函数在启动时和主循环里都会调
+bind_udc() {
+	# 不能用 -s/-f 判断：sysfs/configfs 属性的 st_size 恒为 4096，-s 永远为真
+	[ -n "$(cat "$GADGET/UDC" 2>/dev/null)" ] && return 0
+	udc=$(ls /sys/class/udc 2>/dev/null | head -1)
+	if [ -z "$udc" ]; then
+		log "udc: /sys/class/udc 为空（dwc3 未 probe）"
+		return 1
+	fi
+	if echo "$udc" >"$GADGET/UDC" 2>/dev/null; then
+		log "udc: 已绑定 $udc"
+	else
+		log "udc: 绑定 $udc FAILED"
+	fi
+}
+
+if setup_gadget; then
+	bind_udc
+else
+	log "gadget: 初始化失败，跳过 UDC 绑定"
+fi
+
+# usb0 由 rndis 函数在 UDC 绑定后创建
+try "net: $IFACE $ADDR netmask $MASK up" ifconfig "$IFACE" "$ADDR" netmask "$MASK" up
+
+if command -v telnetd >/dev/null 2>&1; then
+	try "telnetd: 23 端口 /bin/sh" telnetd -l /bin/sh -p 23
+elif [ -x /bin/busybox-extras ]; then
+	try "telnetd: 23 端口 /bin/sh（busybox-extras）" /bin/busybox-extras telnetd -l /bin/sh -p 23
+else
+	log "telnetd: 既没有 telnetd 也没有 /bin/busybox-extras"
+fi
+
+log "init: 保持运行（不重启），等主机连 $ADDR:23"
+while true; do
+	sleep 5
+	bind_udc
+	ifconfig "$IFACE" >/dev/null 2>&1 || \
+		ifconfig "$IFACE" "$ADDR" netmask "$MASK" up 2>/dev/null
+	{
+		echo "MUNCH-INIT: tick"
+		dmesg 2>/dev/null | tail -5
+	} >>"$KMSG" 2>/dev/null
+done
